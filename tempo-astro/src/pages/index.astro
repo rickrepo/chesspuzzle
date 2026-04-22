@@ -1,0 +1,35 @@
+---
+import { PUZZLE, YESTERDAY } from '~/data/puzzles';
+import Puzzle from '~/components/Puzzle.tsx';
+import '~/styles/global.css';
+
+const ogTitle = `Tempo №${PUZZLE.id} · ${PUZZLE.subtitle}`;
+const ogDescription = `Daily chess puzzle. ${PUZZLE.sideLabel}, mate in ${PUZZLE.mateIn}. ${PUZZLE.blurb}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tempo · Daily Chess Puzzle</title>
+    <meta name="description" content={ogDescription} />
+    <meta property="og:title" content={ogTitle} />
+    <meta property="og:description" content={ogDescription} />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#1a1613" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <Puzzle puzzle={PUZZLE} yesterday={YESTERDAY} client:load />
+  </body>
+</html>
+<style is:global>
+  body {
+    display: flex;
+    justify-content: center;
+    background: #e5dcc6;
+  }
+  @media (max-width: 899px) {
+    body { background: var(--paper); }
+  }
+</style>

@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --paper: #f3ead8;
+  --paper-deep: #ece1cb;
+  --ink: #1a1613;
+  --accent: #c24a2f;
+  --font-serif: 'Fraunces', 'Times New Roman', serif;
+  --font-sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #e5dcc6;
+  color: var(--ink);
+  min-height: 100vh;
+}
+body { font-family: var(--font-sans); }
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+button { font-family: inherit; }
+
+@keyframes tempo-shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+  40%, 60% { transform: translate3d(3px, 0, 0); }
+}
+@keyframes tempo-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes tempo-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.4; }
+}
+@keyframes tempo-check-pulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.6; }
+  50%      { transform: scale(1.15); opacity: 1; }
+}
+@keyframes tempo-arrow-fade {
+  from { opacity: 0; stroke-dashoffset: 60; }
+  to   { opacity: 0.85; stroke-dashoffset: 0; }
+}
+@keyframes tempo-mate-sweep {
+  from { background-position: 150% 0; opacity: 0; }
+  30%  { opacity: 1; }
+  to   { background-position: -50% 0; opacity: 0; }
+}
+
+.tempo-settings-btn {
+  background: transparent;
+  border: 1px solid rgba(26,22,19,0.22);
+  width: 34px; height: 34px;
+  cursor: pointer;
+  color: #1a1613;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+.tempo-settings-btn:hover {
+  background: #1a1613;
+  color: #f3ead8;
+  border-color: #1a1613;
+}
