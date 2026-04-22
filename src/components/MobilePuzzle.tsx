@@ -148,3 +148,58 @@ export function MobilePuzzle(p: MobilePuzzleProps) {
         ) : (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: 'rgba(26,22,19,0.5)', minWidth: 86, textAlign: 'right' }}>
             {p.userMoveCount}/{puzzle.par}
+            {p.userMoveCount > puzzle.par && <span style={{ color: '#c24a2f' }}> +{p.userMoveCount - puzzle.par}</span>}
+            <span style={{ color: 'rgba(26,22,19,0.3)' }}> · {fmt(p.timerMs)}</span>
+          </div>
+        )}
+      </div>
+
+      {!isGameOver && (
+        <div style={{ padding: '14px 20px 20px' }}>
+          {!p.hintOpen ? (
+            <button onClick={p.revealHint} style={{ width: '100%', background: 'transparent', border: '1px solid rgba(26,22,19,0.25)', padding: '13px', fontFamily: 'var(--font-sans)', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500, cursor: 'pointer', color: '#1a1613' }}>Reveal hint · costs a star</button>
+          ) : (
+            <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 14, color: 'rgba(26,22,19,0.75)', borderLeft: '2px solid #c24a2f', paddingLeft: 12, lineHeight: 1.45 }}>{puzzle.hint}</div>
+          )}
+          {!p.forfeitConfirm ? (
+            <button onClick={() => p.setForfeitConfirm(true)} style={{ marginTop: 10, width: '100%', background: 'transparent', border: 'none', fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500, cursor: 'pointer', color: 'rgba(26,22,19,0.5)', padding: '8px' }}>Forfeit puzzle</button>
+          ) : (
+            <div style={{ marginTop: 10, border: '1px solid #c24a2f', padding: 12, animation: 'tempo-fade-up .25s ease both' }}>
+              <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13, marginBottom: 8 }}>Give up on today's puzzle?</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={p.forfeit} style={{ flex: 1, background: '#c24a2f', color: '#fff', border: 'none', padding: '10px', fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600, cursor: 'pointer' }}>Forfeit</button>
+                <button onClick={() => p.setForfeitConfirm(false)} style={{ flex: 1, background: 'transparent', color: '#1a1613', border: '1px solid rgba(26,22,19,0.25)', padding: '10px', fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500, cursor: 'pointer' }}>Keep playing</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isSolved && (
+        <div style={{ padding: '14px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Scoreboard stats={puzzle.stats} userMoves={p.userMoveCount} par={puzzle.par} />
+          <ShareCard puzzle={puzzle} userMoves={p.userMoveCount} par={puzzle.par} timeMs={p.timerMs} usedHint={p.usedHint} />
+        </div>
+      )}
+
+      {isForfeit && (
+        <div style={{ padding: '14px 20px 20px' }}>
+          <ForfeitCard puzzle={puzzle} timeMs={p.timerMs} currentStep={p.solutionStep} onReplay={p.replaySolution} />
+        </div>
+      )}
+
+      {!isGameOver && (
+        <div style={{ padding: '0 20px 14px' }}>
+          <YesterdayCard puzzle={yesterday} />
+        </div>
+      )}
+
+      <div style={{ padding: '14px 20px 20px', borderTop: '1px solid rgba(26,22,19,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(26,22,19,0.5)', letterSpacing: '0.04em', marginTop: 'auto' }}>
+        <span>© Tempo</span>
+        <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: '#1a1613', fontSize: 12 }}>
+          Made by <span style={{ borderBottom: '1px solid #c24a2f', paddingBottom: 1, fontStyle: 'normal', fontWeight: 500 }}>Ricky</span>
+        </span>
+      </div>
+    </div>
+  );
+}

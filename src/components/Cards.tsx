@@ -148,3 +148,26 @@ export function Scoreboard({ stats, userMoves, par }: { stats: Puzzle['stats']; 
           return (
             <div key={d.moves} style={{ display: 'grid', gridTemplateColumns: '22px 1fr 40px', gap: 10, alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
               <div style={{ color: isYou ? '#c24a2f' : 'rgba(26,22,19,0.5)', fontWeight: isYou ? 600 : 400, letterSpacing: '0.06em' }}>{d.moves}</div>
+              <div style={{ position: 'relative', height: 18, background: 'rgba(26,22,19,0.06)' }}>
+                <div style={{ position: 'absolute', inset: 0, width: `${w}%`, background: barBg, opacity: barOpacity, transition: 'width .6s cubic-bezier(.2,.7,.2,1)' }} />
+                {isYou && (
+                  <div style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.14em', color: '#f3ead8', fontWeight: 600, textTransform: 'uppercase' }}>You</div>
+                )}
+              </div>
+              <div style={{ color: isYou ? '#1a1613' : 'rgba(26,22,19,0.5)', fontWeight: isYou ? 600 : 400, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{d.pct}%</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 12, fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 12, color: 'rgba(26,22,19,0.5)' }}>
+        {(() => {
+          const row = stats.distribution.find(d => d.moves === userMoves) || stats.distribution[stats.distribution.length - 1];
+          const better = stats.distribution.filter(d => d.moves > userMoves).reduce((a, b) => a + b.pct, 0);
+          if (userMoves <= par) return `You joined the ${row.pct}% who found the clean line.`;
+          if (better > 0) return `You beat ${better}% of today's solvers.`;
+          return `Everyone else solved it tighter. Try tomorrow.`;
+        })()}
+      </div>
+    </div>
+  );
+}

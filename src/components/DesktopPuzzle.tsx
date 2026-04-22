@@ -148,3 +148,66 @@ export function DesktopPuzzle(p: DesktopPuzzleProps) {
               {p.userMoveCount > puzzle.par && !isGameOver && (
                 <span style={{ fontSize: 14, color: '#c24a2f' }}>+{p.userMoveCount - puzzle.par}</span>
               )}
+            </span>
+          } />
+          <Rule />
+          <StatRow label="Turn" value={
+            isGameOver ? (isSolved ? 'Complete' : isForfeit ? 'Forfeit' : 'Over')
+              : (p.history.length % 2 === 1 ? 'Yours' : 'Black')
+          } />
+
+          {!isGameOver && (
+            <div style={{ marginTop: 'auto', paddingTop: 20 }}>
+              {!p.forfeitConfirm ? (
+                <button onClick={() => p.setForfeitConfirm(true)} style={{
+                  width: '100%', background: 'transparent', border: '1px solid rgba(26,22,19,0.2)',
+                  padding: '12px', fontFamily: 'var(--font-sans)', fontSize: 11,
+                  letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500,
+                  cursor: 'pointer', color: 'rgba(26,22,19,0.6)', transition: 'all .15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#c24a2f'; e.currentTarget.style.borderColor = '#c24a2f'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,22,19,0.6)'; e.currentTarget.style.borderColor = 'rgba(26,22,19,0.2)'; }}
+                >Forfeit puzzle</button>
+              ) : (
+                <div style={{ border: '1px solid #c24a2f', padding: 14, animation: 'tempo-fade-up .25s ease both' }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 14, marginBottom: 10, lineHeight: 1.4 }}>Give up on today's puzzle?</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={p.forfeit} style={{ flex: 1, background: '#c24a2f', color: '#fff', border: 'none', padding: '10px', fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600, cursor: 'pointer' }}>Forfeit</button>
+                    <button onClick={() => p.setForfeitConfirm(false)} style={{ flex: 1, background: 'transparent', color: '#1a1613', border: '1px solid rgba(26,22,19,0.25)', padding: '10px', fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500, cursor: 'pointer' }}>Keep playing</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isSolved && <ShareCard puzzle={puzzle} userMoves={p.userMoveCount} par={puzzle.par} timeMs={p.timerMs} usedHint={p.usedHint} />}
+          {isForfeit && <ForfeitCard puzzle={puzzle} timeMs={p.timerMs} currentStep={p.solutionStep} onReplay={p.replaySolution} />}
+        </div>
+      </div>
+
+      {isSolved && (
+        <div style={{ padding: '0 48px 28px' }}>
+          <Scoreboard stats={puzzle.stats} userMoves={p.userMoveCount} par={puzzle.par} />
+        </div>
+      )}
+
+      <div style={{
+        padding: '22px 48px 24px', borderTop: '1px solid rgba(26,22,19,0.1)',
+        display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 32, alignItems: 'center',
+        fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(26,22,19,0.5)', letterSpacing: '0.04em',
+      }}>
+        <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+          <span>© Tempo</span>
+          <span style={{ opacity: 0.5 }}>·</span>
+          <span>One puzzle a day</span>
+          <span style={{ opacity: 0.5 }}>·</span>
+          <span>No account required</span>
+        </div>
+        <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13, color: '#1a1613', letterSpacing: '0.01em' }}>
+          Made by <span style={{ borderBottom: '1px solid #c24a2f', paddingBottom: 1, fontStyle: 'normal', fontWeight: 500, fontFamily: 'var(--font-serif)' }}>Ricky</span>
+        </div>
+        <div style={{ textAlign: 'right' }}>Drag or click to move · ← → to replay</div>
+      </div>
+    </div>
+  );
+}

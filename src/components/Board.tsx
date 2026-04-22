@@ -148,3 +148,311 @@ export function Board({
         const oppColor: Color = p.color === 'w' ? 'b' : 'w';
         const check = inCheck(next, oppColor);
         const mate = isCheckmate(next, oppColor);
+        const moveMeta: MoveMeta = {
+          from: m.from, to: m.to, fromSq, toSq,
+          piece: p.type, color: p.color,
+          capture: !!target, check, checkmate: mate,
+          byUser: false, scripted: true,
+        };
+        h = [...h, { pieces: next, turn: oppColor, move: moveMeta, check }];
+        curPieces = next;
+        setHistory(h);
+        onHistoryChange?.(h);
+        onSolutionStep?.(i, moveMeta);
+        if (mate) {
+          setMateGlow(true);
+          setTimeout(() => setMateGlow(false), 1800);
+        }
+      }, delay));
+    });
+    return () => {
+      flag.cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [solutionPlayback?.key]);
+
+  const latestIdx = history.length - 1;
+  const activeIdx = viewIndex != null ? Math.max(0, Math.min(viewIndex, latestIdx)) : latestIdx;
+  const viewing = activeIdx !== latestIdx;
+  const snap = history[activeIdx];
+  const pieces = snap.pieces;
+  const turn = snap.turn;
+  const lastMove = snap.move;
+  const isInCheck = snap.check;
+
+  const isUserTurn = !ended && !viewing && !disabled && !solutionPlayback && turn === userColor;
+
+  function pushSnap(snapshot: Snapshot): Snapshot[] {
+    const next = [...history, snapshot];
+    setHistory(next);
+    onHistoryChange?.(next);
+    return next;
+  }
+
+  function applyUserMove(fromSq: number, toSq: number): boolean {
+    const p = pieces[fromSq];
+    if (!p || p.color !== userColor) return false;
+    const legal = legalMoves(pieces, fromSq);
+    if (!legal.includes(toSq)) return false;
+
+    const target = pieces[toSq];
+    const nextPieces = makeMove(pieces, fromSq, toSq);
+    const oppColor: Color = p.color === 'w' ? 'b' : 'w';
+    const check = inCheck(nextPieces, oppColor);
+    const mate = isCheckmate(nextPieces, oppColor);
+    const stale = isStalemate(nextPieces, oppColor);
+    const moveMeta: MoveMeta = {
+      from: sqName(fromSq), to: sqName(toSq),
+      fromSq, toSq, piece: p.type, color: p.color,
+      capture: !!target, check, checkmate: mate, stalemate: stale, byUser: true,
+    };
+    const newHist = pushSnap({ pieces: nextPieces, turn: oppColor, move: moveMeta, check });
+    onUserMove?.({ ...moveMeta, ply: newHist.length - 1 });
+    if (mate || stale) {
+      const result: GameEnd['result'] = mate ? 'checkmate-user-wins' : 'stalemate';
+      setEnded({ result, ply: newHist.length - 1 });
+      onGameEnd?.({ result, ply: newHist.length - 1 });
+      if (mate) {
+        setMateGlow(true);
+        setTimeout(() => setMateGlow(false), 1800);
+      }
+    }
+    return true;
+  }
+
+  // Auto-play opponent when live.
+  useEffect(() => {
+    if (ended) return;
+    if (viewing) return;
+    if (solutionPlayback) return;
+    if (turn === userColor) return;
+    const tid = setTimeout(() => {
+      const move = pickOpponentMove(pieces, turn);
+      if (!move) {
+        const isMate = inCheck(pieces, turn);
+        const result: GameEnd['result'] = isMate ? 'checkmate-user-wins' : 'stalemate';
+        setEnded({ result, ply: latestIdx });
+        onGameEnd?.({ result, ply: latestIdx });
+        return;
+      }
+      const p = pieces[move.from];
+      const target = pieces[move.to];
+      const nextPieces = makeMove(pieces, move.from, move.to);
+      const oppColor: Color = p.color === 'w' ? 'b' : 'w';
+      const check = inCheck(nextPieces, oppColor);
+      const mate = isCheckmate(nextPieces, oppColor);
+      const stale = isStalemate(nextPieces, oppColor);
+      const moveMeta: MoveMeta = {
+        from: sqName(move.from), to: sqName(move.to),
+        fromSq: move.from, toSq: move.to,
+        piece: p.type, color: p.color,
+        capture: !!target, check, checkmate: mate, stalemate: stale, byUser: false,
+      };
+      const newHist = pushSnap({ pieces: nextPieces, turn: oppColor, move: moveMeta, check });
+      onOpponentMove?.({ ...moveMeta, ply: newHist.length - 1 });
+      if (mate || stale) {
+        const result: GameEnd['result'] = mate ? 'checkmate-user-loses' : 'stalemate';
+        setEnded({ result, ply: newHist.length - 1 });
+        onGameEnd?.({ result, ply: newHist.length - 1 });
+        if (mate) {
+          setMateGlow(true);
+          setTimeout(() => setMateGlow(false), 1800);
+        }
+      }
+    }, 700);
+    return () => clearTimeout(tid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIdx, viewing, ended]);
+
+  function squarePx(s: number) {
+    const file = fileOf(s), rank = rankOf(s);
+    const col = orient === 'w' ? file : 7 - file;
+    const row = orient === 'w' ? 7 - rank : rank;
+    return { x: col * (boardSize / 8), y: row * (boardSize / 8) };
+  }
+  function pxToSquare(x: number, y: number): number | null {
+    const size = boardSize / 8;
+    const col = Math.floor(x / size);
+    const row = Math.floor(y / size);
+    if (col < 0 || col > 7 || row < 0 || row > 7) return null;
+    const file = orient === 'w' ? col : 7 - col;
+    const rank = orient === 'w' ? 7 - row : row;
+    return sq(file, rank);
+  }
+
+  function onPointerDown(e: React.PointerEvent, fromSq: number) {
+    if (!isUserTurn) return;
+    const p = pieces[fromSq];
+    if (!p || p.color !== userColor) return;
+    const rect = boardRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setSelected(fromSq);
+    setLegalHover(legalMoves(pieces, fromSq));
+    setDrag({ from: fromSq, x, y, pointerId: e.pointerId });
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch {}
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    if (!drag) return;
+    const rect = boardRef.current!.getBoundingClientRect();
+    setDrag(d => d ? { ...d, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    if (!drag) return;
+    const rect = boardRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const target = pxToSquare(x, y);
+    const from = drag.from;
+    setDrag(null);
+    if (target != null && target !== from) {
+      const ok = applyUserMove(from, target);
+      if (ok) { setSelected(null); setLegalHover([]); }
+    }
+  }
+  function onSquareClick(s: number) {
+    if (!isUserTurn) return;
+    if (selected != null && legalHover.includes(s)) {
+      applyUserMove(selected, s);
+      setSelected(null);
+      setLegalHover([]);
+      return;
+    }
+    const p = pieces[s];
+    if (p && p.color === userColor) {
+      setSelected(s);
+      setLegalHover(legalMoves(pieces, s));
+    } else {
+      setSelected(null);
+      setLegalHover([]);
+    }
+  }
+
+  const sqSize = boardSize / 8;
+
+  const squares: React.ReactNode[] = [];
+  for (let s = 0; s < 64; s++) {
+    const { x, y } = squarePx(s);
+    const isLight = (fileOf(s) + rankOf(s)) % 2 === 1;
+    const isSelected = selected === s;
+    const isLegal = legalHover.includes(s);
+    const isLastFrom = lastMove && lastMove.fromSq === s;
+    const isLastTo = lastMove && lastMove.toSq === s;
+
+    let overlay: string | null = null;
+    if (isSelected) overlay = inkTheme.highlight;
+    else if (isLastFrom || isLastTo) overlay = inkTheme.lastMove;
+
+    squares.push(
+      <div key={`sq-${s}`} onClick={() => onSquareClick(s)}
+        style={{
+          position: 'absolute', left: x, top: y, width: sqSize, height: sqSize,
+          background: isLight ? inkTheme.light : inkTheme.dark,
+          cursor: isUserTurn ? 'pointer' : 'default',
+          transition: 'background .25s',
+        }}>
+        {overlay && <div style={{ position: 'absolute', inset: 0, background: overlay, pointerEvents: 'none' }} />}
+        {isLegal && !pieces[s] && (
+          <div style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: sqSize * 0.28, height: sqSize * 0.28,
+            borderRadius: '50%', background: inkTheme.legal,
+            transform: 'translate(-50%,-50%)', pointerEvents: 'none',
+          }} />
+        )}
+        {isLegal && pieces[s] && (
+          <div style={{ position: 'absolute', inset: 2, borderRadius: '50%', border: `3px solid ${inkTheme.legal}`, pointerEvents: 'none' }} />
+        )}
+        {showCoords && fileOf(s) === (orient === 'w' ? 0 : 7) && (
+          <div style={{
+            position: 'absolute', left: 4, top: 2,
+            fontFamily: 'var(--font-mono)', fontSize: Math.max(9, sqSize * 0.14),
+            color: isLight ? inkTheme.coordDark : inkTheme.coordLight,
+            pointerEvents: 'none', fontWeight: 500,
+          }}>{rankOf(s) + 1}</div>
+        )}
+        {showCoords && rankOf(s) === (orient === 'w' ? 0 : 7) && (
+          <div style={{
+            position: 'absolute', right: 4, bottom: 1,
+            fontFamily: 'var(--font-mono)', fontSize: Math.max(9, sqSize * 0.14),
+            color: isLight ? inkTheme.coordDark : inkTheme.coordLight,
+            pointerEvents: 'none', fontWeight: 500,
+          }}>{'abcdefgh'[fileOf(s)]}</div>
+        )}
+      </div>
+    );
+  }
+
+  const checkSq = (() => {
+    if (!isInCheck) return -1;
+    for (const [sStr, p] of Object.entries(pieces)) {
+      if (p.type === 'k' && p.color === turn) return +sStr;
+    }
+    return -1;
+  })();
+
+  const pieceNodes: React.ReactNode[] = [];
+  for (const [sStr, p] of Object.entries(pieces)) {
+    const s = +sStr;
+    const isDragging = drag && drag.from === s;
+    let { x, y } = squarePx(s);
+    if (isDragging) {
+      x = drag!.x - sqSize / 2;
+      y = drag!.y - sqSize / 2;
+    }
+    const isCheckKing = s === checkSq;
+    pieceNodes.push(
+      <div key={`p-${s}`}
+        onPointerDown={(e) => onPointerDown(e, s)}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        style={{
+          position: 'absolute', left: x, top: y, width: sqSize, height: sqSize,
+          transition: isDragging ? 'none' : 'left .18s ease-out, top .18s ease-out',
+          zIndex: isDragging ? 30 : (isCheckKing ? 6 : 2),
+          cursor: p.color === userColor && isUserTurn ? (isDragging ? 'grabbing' : 'grab') : 'default',
+          touchAction: 'none',
+        }}>
+        {isCheckKing && (
+          <div style={{
+            position: 'absolute', inset: -4, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(194,74,47,0.55) 0%, rgba(194,74,47,0) 65%)',
+            animation: 'tempo-check-pulse 1.2s ease-in-out infinite',
+            pointerEvents: 'none',
+          }} />
+        )}
+        <PieceGlyph type={p.type} color={p.color} setKey={pieceSet} size={sqSize} />
+      </div>
+    );
+  }
+
+  return (
+    <div ref={boardRef} style={{
+      position: 'relative', width: boardSize, height: boardSize,
+      background: inkTheme.light, boxShadow: inkTheme.shadow,
+      borderRadius: 2, overflow: 'hidden', userSelect: 'none',
+    }}>
+      {squares}
+      {pieceNodes}
+
+      {mateGlow && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 12,
+          background: 'linear-gradient(115deg, transparent 35%, rgba(243,234,216,0.35) 50%, transparent 65%)',
+          backgroundSize: '250% 100%',
+          animation: 'tempo-mate-sweep 1.4s cubic-bezier(.25,.8,.3,1) both',
+        }} />
+      )}
+
+      {viewing && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 15,
+          background: 'rgba(26,22,19,0.06)',
+          boxShadow: 'inset 0 0 0 2px rgba(26,22,19,0.35)',
+          transition: 'all .2s',
+        }} />
+      )}
+    </div>
+  );
+}
