@@ -1,10 +1,9 @@
 ---
-import { PUZZLE, YESTERDAY } from '~/data/puzzles';
 import Puzzle from '~/components/Puzzle.tsx';
 import '~/styles/global.css';
 
-const ogTitle = `Tempo №${PUZZLE.id} · ${PUZZLE.subtitle}`;
-const ogDescription = `Daily chess puzzle. ${PUZZLE.sideLabel}, mate in ${PUZZLE.mateIn}. ${PUZZLE.blurb}`;
+const ogTitle = 'Tempo · Daily Chess Puzzle';
+const ogDescription = 'A forced mate every day. No account required.';
 ---
 <!doctype html>
 <html lang="en">
@@ -18,9 +17,10 @@ const ogDescription = `Daily chess puzzle. ${PUZZLE.sideLabel}, mate in ${PUZZLE
     <meta property="og:type" content="website" />
     <meta name="theme-color" content="#1a1613" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" as="fetch" href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/puzzles.json`} crossorigin="anonymous" />
   </head>
   <body>
-    <Puzzle puzzle={PUZZLE} yesterday={YESTERDAY} client:load />
+    <Puzzle client:load />
   </body>
 </html>
 <style is:global>

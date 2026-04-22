@@ -1,7 +1,7 @@
 // Top-level interactive island. Owns all shared puzzle state.
 // Picks Desktop or Mobile layout based on viewport width.
 import { useEffect, useState } from 'react';
-import type { Puzzle as PuzzleData, ArchivePuzzle } from '~/data/puzzles';
+import { loadPool, puzzleForDate, yesterdayForDate, type Puzzle as PuzzleData, type ArchivePuzzle } from '~/data/puzzles';
 import type { PieceSetKey } from './Pieces';
 import type { Snapshot, GameEnd, MoveMeta, SolutionPlayback } from './Board';
 import { useTimer } from './Widgets';
@@ -9,12 +9,26 @@ import { useIsDesktop } from '~/lib/useIsDesktop';
 import { DesktopPuzzle } from './DesktopPuzzle';
 import { MobilePuzzle } from './MobilePuzzle';
 
-export interface PuzzleProps {
-  puzzle: PuzzleData;
-  yesterday: ArchivePuzzle;
+export default function Puzzle() {
+  const [picked, setPicked] = useState<{ puzzle: PuzzleData; yesterday: ArchivePuzzle } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadPool().then(pool => {
+      const now = new Date();
+      setPicked({
+        puzzle: puzzleForDate(pool, now),
+        yesterday: yesterdayForDate(pool, now),
+      });
+    }).catch(e => setLoadError(String(e)));
+  }, []);
+
+  if (loadError) return <LoadError message={loadError} />;
+  if (!picked) return <LoadSkeleton />;
+  return <PuzzleBody puzzle={picked.puzzle} yesterday={picked.yesterday} />;
 }
 
-export default function Puzzle({ puzzle, yesterday }: PuzzleProps) {
+function PuzzleBody({ puzzle, yesterday }: { puzzle: PuzzleData; yesterday: ArchivePuzzle }) {
   const isDesktop = useIsDesktop(900);
   const [pieceSet, setPieceSet] = useState<PieceSetKey>('classic');
   const [puzzleKey, setPuzzleKey] = useState(0);
@@ -136,6 +150,33 @@ function SettingsButton({ pieceSet, setPieceSet, onReset }: {
           }}>Reset puzzle</button>
         </div>
       )}
+    </div>
+  );
+}
+
+function LoadSkeleton() {
+  return (
+    <div style={{
+      minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.22em',
+      textTransform: 'uppercase', color: 'rgba(26,22,19,0.4)',
+    }}>Loading today's puzzle…</div>
+  );
+}
+
+function LoadError({ message }: { message: string }) {
+  return (
+    <div style={{
+      minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: 10, padding: 24, textAlign: 'center',
+      fontFamily: 'var(--font-sans)', color: '#1a1613',
+    }}>
+      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontStyle: 'italic' }}>
+        Couldn't load today's puzzle.
+      </div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(26,22,19,0.55)' }}>
+        {message}
+      </div>
     </div>
   );
 }
