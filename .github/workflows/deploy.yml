@@ -2,7 +2,7 @@ name: Deploy Tempo to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/review-chess-website-D7XmH]
   workflow_dispatch:
 
 permissions:
