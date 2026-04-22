@@ -55,7 +55,13 @@ function PuzzleBody({ puzzle, yesterday }: { puzzle: PuzzleData; yesterday: Arch
   }, [puzzleKey]);
 
   const onUserMove = (_m: MoveMeta & { ply: number }) => setUserMoveCount(n => n + 1);
-  const onGameEnd = (e: GameEnd) => setEnded(e);
+  const onGameEnd = (e: GameEnd) => {
+    setEnded(e);
+    if (e.result === 'wrong-move') {
+      setSolutionStep(-1);
+      setSolutionPlayback({ moves: puzzle.solutionMoves, key: Date.now() });
+    }
+  };
   const revealHint = () => { setHintOpen(true); setUsedHint(true); };
   const forfeit = () => {
     setForfeitConfirm(false);
@@ -82,6 +88,7 @@ function PuzzleBody({ puzzle, yesterday }: { puzzle: PuzzleData; yesterday: Arch
     solutionPlayback, solutionStep,
     onSolutionStep: (i: number, _m: MoveMeta) => setSolutionStep(i),
     replaySolution,
+    puzzleScript: { moves: puzzle.solutionMoves },
   };
 
   return (

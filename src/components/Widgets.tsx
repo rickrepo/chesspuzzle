@@ -134,7 +134,7 @@ export function YesterdayCard({ puzzle }: { puzzle: ArchivePuzzle }) {
 export interface ObjectiveBannerProps {
   mateIn: number;
   sideLabel: string;
-  status: 'ready' | 'solving' | 'solved' | 'forfeit' | 'over';
+  status: 'ready' | 'solving' | 'solved' | 'forfeit' | 'wrong' | 'over';
   userMoveCount: number;
   par: number;
   viewing: boolean;
@@ -166,6 +166,11 @@ export function ObjectiveBanner({
     title = <>Mate in <span style={{ fontStyle: 'italic' }}>{mateIn}</span></>;
     sub = 'The puzzle is set aside. Come back tomorrow.';
     eyebrowColor = 'rgba(26,22,19,0.55)';
+  } else if (status === 'wrong') {
+    eyebrow = 'Wrong move';
+    title = <>Mate in <span style={{ fontStyle: 'italic' }}>{mateIn}</span></>;
+    sub = 'Not the line. Watch the intended sequence below.';
+    eyebrowColor = '#c24a2f';
   } else if (status === 'over') {
     eyebrow = 'Game over';
     title = <>Position lost</>;

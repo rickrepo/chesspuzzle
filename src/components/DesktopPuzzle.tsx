@@ -1,6 +1,6 @@
 import type { Puzzle, ArchivePuzzle } from '~/data/puzzles';
 import type { PieceSetKey } from './Pieces';
-import type { Snapshot, GameEnd, MoveMeta, SolutionPlayback } from './Board';
+import type { Snapshot, GameEnd, MoveMeta, SolutionPlayback, PuzzleScript } from './Board';
 import { Board } from './Board';
 import { BOARD_THEME } from '~/lib/theme';
 import {
@@ -33,6 +33,7 @@ export interface DesktopPuzzleProps {
   solutionStep: number;
   onSolutionStep: (i: number, m: MoveMeta) => void;
   replaySolution: () => void;
+  puzzleScript: PuzzleScript;
 }
 
 export function DesktopPuzzle(p: DesktopPuzzleProps) {
@@ -40,6 +41,8 @@ export function DesktopPuzzle(p: DesktopPuzzleProps) {
 
   const isSolved = p.ended?.result === 'checkmate-user-wins';
   const isForfeit = p.ended?.result === 'forfeit';
+  const isWrongMove = p.ended?.result === 'wrong-move';
+  const isRevealed = isForfeit || isWrongMove;
   const isGameOver = !!p.ended;
 
   const maxIdx = Math.max(0, p.history.length - 1);
@@ -109,7 +112,7 @@ export function DesktopPuzzle(p: DesktopPuzzleProps) {
           )}
 
           <ObjectiveBanner mateIn={puzzle.mateIn} sideLabel={puzzle.sideLabel}
-            status={isSolved ? 'solved' : isForfeit ? 'forfeit' : p.ended ? 'over' : p.history.length > 1 ? 'solving' : 'ready'}
+            status={isSolved ? 'solved' : isWrongMove ? 'wrong' : isForfeit ? 'forfeit' : p.ended ? 'over' : p.history.length > 1 ? 'solving' : 'ready'}
             userMoveCount={p.userMoveCount} par={puzzle.par}
             viewing={p.viewIndex != null} onReturnLive={onReturnLive}
             viewingIdx={effectiveIdx} maxIdx={maxIdx} />
@@ -122,9 +125,10 @@ export function DesktopPuzzle(p: DesktopPuzzleProps) {
             boardSize={560}
             inkTheme={BOARD_THEME}
             puzzleKey={puzzleKey}
-            viewIndex={isForfeit ? null : p.viewIndex}
+            viewIndex={isRevealed ? null : p.viewIndex}
             disabled={!!p.ended}
-            solutionPlayback={isForfeit ? p.solutionPlayback : null}
+            solutionPlayback={isRevealed ? p.solutionPlayback : null}
+            puzzleScript={p.puzzleScript}
             onUserMove={p.onUserMove}
             onHistoryChange={p.setHistory}
             onGameEnd={p.onGameEnd}
@@ -181,7 +185,7 @@ export function DesktopPuzzle(p: DesktopPuzzleProps) {
           )}
 
           {isSolved && <ShareCard puzzle={puzzle} userMoves={p.userMoveCount} par={puzzle.par} timeMs={p.timerMs} usedHint={p.usedHint} />}
-          {isForfeit && <ForfeitCard puzzle={puzzle} timeMs={p.timerMs} currentStep={p.solutionStep} onReplay={p.replaySolution} />}
+          {isRevealed && <ForfeitCard puzzle={puzzle} timeMs={p.timerMs} currentStep={p.solutionStep} onReplay={p.replaySolution} />}
         </div>
       </div>
 

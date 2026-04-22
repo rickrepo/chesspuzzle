@@ -5,7 +5,7 @@ import {
   sq, fileOf, rankOf, sqName, nameToSq,
   parseFEN, legalMoves, makeMove, inCheck, isCheckmate, isStalemate,
   pickOpponentMove,
-  type Color, type Pieces,
+  type Color, type Pieces, type Move,
 } from '~/lib/engine';
 import { PieceGlyph, type PieceSetKey } from './Pieces';
 
@@ -46,13 +46,20 @@ export interface BoardTheme {
 }
 
 export interface GameEnd {
-  result: 'checkmate-user-wins' | 'checkmate-user-loses' | 'stalemate' | 'forfeit';
+  result: 'checkmate-user-wins' | 'checkmate-user-loses' | 'stalemate' | 'forfeit' | 'wrong-move';
   ply: number;
 }
 
 export interface SolutionPlayback {
   moves: { from: string; to: string }[];
   key: number;
+}
+
+// Scripted puzzle mode: user must play each move in `moves` in order.
+// Opponent replies come from the same script (interleaved). Any user move
+// that doesn't match ends the game with result 'wrong-move'.
+export interface PuzzleScript {
+  moves: { from: string; to: string }[];
 }
 
 export interface BoardProps {
@@ -67,6 +74,7 @@ export interface BoardProps {
   viewIndex?: number | null;
   disabled?: boolean;
   solutionPlayback?: SolutionPlayback | null;
+  puzzleScript?: PuzzleScript | null;
   onUserMove?: (m: MoveMeta & { ply: number }) => void;
   onOpponentMove?: (m: MoveMeta & { ply: number }) => void;
   onGameEnd?: (e: GameEnd) => void;
@@ -87,6 +95,7 @@ export function Board({
   viewIndex = null,
   disabled = false,
   solutionPlayback = null,
+  puzzleScript = null,
   onUserMove,
   onOpponentMove,
   onGameEnd,
@@ -196,6 +205,17 @@ export function Board({
     const legal = legalMoves(pieces, fromSq);
     if (!legal.includes(toSq)) return false;
 
+    // Scripted puzzle mode: the move must match the expected line. A legal
+    // move that doesn't match ends the puzzle as a wrong answer (we still
+    // apply it visually so the user sees what they played).
+    let wrong = false;
+    if (puzzleScript) {
+      const expected = puzzleScript.moves[history.length - 1];
+      if (expected && (expected.from !== sqName(fromSq) || expected.to !== sqName(toSq))) {
+        wrong = true;
+      }
+    }
+
     const target = pieces[toSq];
     const nextPieces = makeMove(pieces, fromSq, toSq);
     const oppColor: Color = p.color === 'w' ? 'b' : 'w';
@@ -209,7 +229,10 @@ export function Board({
     };
     const newHist = pushSnap({ pieces: nextPieces, turn: oppColor, move: moveMeta, check });
     onUserMove?.({ ...moveMeta, ply: newHist.length - 1 });
-    if (mate || stale) {
+    if (wrong) {
+      setEnded({ result: 'wrong-move', ply: newHist.length - 1 });
+      onGameEnd?.({ result: 'wrong-move', ply: newHist.length - 1 });
+    } else if (mate || stale) {
       const result: GameEnd['result'] = mate ? 'checkmate-user-wins' : 'stalemate';
       setEnded({ result, ply: newHist.length - 1 });
       onGameEnd?.({ result, ply: newHist.length - 1 });
@@ -228,7 +251,18 @@ export function Board({
     if (solutionPlayback) return;
     if (turn === userColor) return;
     const tid = setTimeout(() => {
-      const move = pickOpponentMove(pieces, turn);
+      let move: Move | null = null;
+      if (puzzleScript) {
+        const scripted = puzzleScript.moves[history.length - 1];
+        if (scripted) {
+          const from = nameToSq(scripted.from);
+          const to = nameToSq(scripted.to);
+          if (pieces[from] && legalMoves(pieces, from).includes(to)) {
+            move = { from, to };
+          }
+        }
+      }
+      if (!move) move = pickOpponentMove(pieces, turn);
       if (!move) {
         const isMate = inCheck(pieces, turn);
         const result: GameEnd['result'] = isMate ? 'checkmate-user-wins' : 'stalemate';

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Puzzle, ArchivePuzzle } from '~/data/puzzles';
 import type { PieceSetKey } from './Pieces';
-import type { Snapshot, GameEnd, MoveMeta, SolutionPlayback } from './Board';
+import type { Snapshot, GameEnd, MoveMeta, SolutionPlayback, PuzzleScript } from './Board';
 import { Board } from './Board';
 import { BOARD_THEME } from '~/lib/theme';
 import { HeaderMark, SolversStat, YesterdayCard, fmt } from './Widgets';
@@ -31,6 +31,7 @@ export interface MobilePuzzleProps {
   solutionStep: number;
   onSolutionStep: (i: number, m: MoveMeta) => void;
   replaySolution: () => void;
+  puzzleScript: PuzzleScript;
 }
 
 export function MobilePuzzle(p: MobilePuzzleProps) {
@@ -38,6 +39,8 @@ export function MobilePuzzle(p: MobilePuzzleProps) {
 
   const isSolved = p.ended?.result === 'checkmate-user-wins';
   const isForfeit = p.ended?.result === 'forfeit';
+  const isWrongMove = p.ended?.result === 'wrong-move';
+  const isRevealed = isForfeit || isWrongMove;
   const isGameOver = !!p.ended;
 
   const [winW, setWinW] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 390);
@@ -79,13 +82,13 @@ export function MobilePuzzle(p: MobilePuzzleProps) {
 
       <div style={{
         margin: '0 20px 14px', padding: '14px 16px',
-        background: isSolved ? '#1a7a3a' : isForfeit ? 'rgba(26,22,19,0.85)' : '#1a1613',
+        background: isSolved ? '#1a7a3a' : isWrongMove ? '#7a2619' : isForfeit ? 'rgba(26,22,19,0.85)' : '#1a1613',
         color: '#f3ead8', transition: 'background .3s',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.22em', color: isSolved ? 'rgba(243,234,216,0.85)' : '#d16a4a', fontWeight: 600, marginBottom: 4 }}>
-              {p.viewIndex != null ? 'REPLAYING' : isSolved ? 'SOLVED' : isForfeit ? 'FORFEITED' : 'OBJECTIVE'}
+              {p.viewIndex != null ? 'REPLAYING' : isSolved ? 'SOLVED' : isWrongMove ? 'WRONG MOVE' : isForfeit ? 'FORFEITED' : 'OBJECTIVE'}
             </div>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, lineHeight: 1, letterSpacing: '-0.01em' }}>
               {p.viewIndex != null
@@ -111,9 +114,10 @@ export function MobilePuzzle(p: MobilePuzzleProps) {
           boardSize={boardSize}
           inkTheme={BOARD_THEME}
           puzzleKey={puzzleKey}
-          viewIndex={isForfeit ? null : p.viewIndex}
+          viewIndex={isRevealed ? null : p.viewIndex}
           disabled={!!p.ended}
-          solutionPlayback={isForfeit ? p.solutionPlayback : null}
+          solutionPlayback={isRevealed ? p.solutionPlayback : null}
+          puzzleScript={p.puzzleScript}
           onUserMove={p.onUserMove}
           onHistoryChange={p.setHistory}
           onGameEnd={p.onGameEnd}
@@ -140,7 +144,7 @@ export function MobilePuzzle(p: MobilePuzzleProps) {
         </div>
         <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13, color: 'rgba(26,22,19,0.7)', flex: 1, textAlign: 'center' }}>
           {isGameOver
-            ? (isSolved ? 'Checkmate — cleanly done.' : isForfeit ? 'Set aside for today.' : 'Game over.')
+            ? (isSolved ? 'Checkmate — cleanly done.' : isWrongMove ? 'Not the line. Here it is.' : isForfeit ? 'Set aside for today.' : 'Game over.')
             : p.history.length === 0 || p.history.length % 2 === 1 ? 'Your move, white.' : 'Black is thinking…'}
         </div>
         {p.viewIndex != null ? (
@@ -182,7 +186,7 @@ export function MobilePuzzle(p: MobilePuzzleProps) {
         </div>
       )}
 
-      {isForfeit && (
+      {isRevealed && (
         <div style={{ padding: '14px 20px 20px' }}>
           <ForfeitCard puzzle={puzzle} timeMs={p.timerMs} currentStep={p.solutionStep} onReplay={p.replaySolution} />
         </div>
